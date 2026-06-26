@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import * as D from './data.js'
-import { KpiGrid, BarList, AreaTrend, HourBars, Sankey, Funnel, UserExplorer, Section, Insight, fmt } from './components.jsx'
+import { KpiGrid, BarList, AreaTrend, HourBars, Sankey, Funnel, UserExplorer, Section, Insight, Login, fmt } from './components.jsx'
 import { useMetrics } from './useMetrics.js'
 import { useRum } from './useRum.js'
+import { getKey } from './auth.js'
 
 const TABS = [
   { id:'overview', label:'Overview', win:'90d' },
@@ -26,7 +27,7 @@ function Card({ title, hint, children, style }) {
 
 function Tag({ k, children }) { return <span className={'tag ' + k}>{children}</span> }
 
-export default function App() {
+function Dashboard() {
   const [tab, setTab] = useState('overview')
   const [filter, setFilter] = useState(null)
   const [q, setQ] = useState('')
@@ -271,4 +272,9 @@ export default function App() {
       </div>
     </>
   )
+}
+
+export default function App() {
+  const [authed, setAuthed] = useState(!!getKey())
+  return authed ? <Dashboard /> : <Login onOk={() => setAuthed(true)} />
 }
