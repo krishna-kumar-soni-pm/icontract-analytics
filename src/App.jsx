@@ -80,7 +80,6 @@ export default function App() {
             <span className="chip">6 prod regions</span>
             <span className="chip">86 tenants · 812 users</span>
           </div>
-          <div className="pii">🔒 Emails masked. Zycus-internal QA and bot accounts excluded.</div>
         </header>
       </div>
 
