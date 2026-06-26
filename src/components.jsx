@@ -221,11 +221,22 @@ export function UserExplorer({ users, journeys, filter, q, setQ, onClear }) {
                     <tr className="udetail"><td colSpan={7}>
                       <div className="udetail-in">
                         <div className="stage-chips">
-                          {u.stages.map(s => <span className="chip-mini" key={s}>{STAGE[s].label}</span>)}
+                          {u.stages && u.stages.length
+                            ? u.stages.map(s => <span className="chip-mini" key={s}>{STAGE[s] ? STAGE[s].label : s}</span>)
+                            : <span className="chip-mini">No lifecycle stage recorded</span>}
                         </div>
                         {j
                           ? (<><p className="jsum">{j.sum}</p><Steps steps={j.steps} /></>)
-                          : (<p className="jsum muted-note">No full session was captured for this user in the 30-day RUM window. Stages above are reconstructed from view events.</p>)}
+                          : (
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:'18px', fontSize:'12.5px', color:'var(--ink-soft)', marginTop:'2px' }}>
+                              <span><b style={{ color:'var(--ink)' }}>{u.sessions ?? '—'}</b> sessions</span>
+                              <span><b style={{ color:'var(--ink)' }}>{u.v}</b> views</span>
+                              <span><b style={{ color:'var(--ink)' }}>{u.a}</b> active</span>
+                              <span><b style={{ color: u.err > 100 ? 'var(--red)' : 'var(--ink)' }}>{u.err}</b> errors</span>
+                              {u.country && <span>📍 {u.country}</span>}
+                              {u.device && <span>🖥 {u.device}</span>}
+                            </div>
+                          )}
                       </div>
                     </td></tr>
                   )}
