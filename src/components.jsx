@@ -50,44 +50,84 @@ export function BarList({ rows, size, onRowClick }) {
   )
 }
 
-// area + line trend
+// computed-insight banner shown under a section's lead
+export function Insight({ children }) {
+  return (
+    <div style={{ display:'flex', gap:'9px', alignItems:'flex-start', background:'var(--blue-tint)', border:'1px solid #cfe0f5', borderRadius:'10px', padding:'10px 14px', margin:'-6px 0 20px', fontSize:'13.5px', color:'var(--ink-soft)', lineHeight:1.5 }}>
+      <span style={{ flex:'0 0 auto' }}>💡</span>
+      <span><b style={{ color:'var(--ink)' }}>Insight — </b>{children}</span>
+    </div>
+  )
+}
+
+// area + line trend with hover readout
 export function AreaTrend({ data }) {
-  const W = 1140, H = 260, pad = 26, max = Math.max(...data) * 1.08
-  const x = i => pad + i * (W - 2 * pad) / (data.length - 1)
+  const [hi, setHi] = useState(null)
+  const n = data.length, W = 1140, H = 260, pad = 26, max = Math.max(...data) * 1.08
+  const x = i => pad + i * (W - 2 * pad) / (n - 1)
   const y = v => H - pad - (v / max) * (H - 2 * pad)
   let d = `M${x(0)},${y(data[0])}`
   data.forEach((v, i) => { if (i) d += `L${x(i)},${y(v)}` })
-  const area = `${d}L${x(data.length - 1)},${H - pad}L${x(0)},${H - pad}Z`
+  const area = `${d}L${x(n - 1)},${H - pad}L${x(0)},${H - pad}Z`
   const grid = []
   for (let g = 0; g <= 3; g++) {
     const yy = pad + g * (H - 2 * pad) / 3
     grid.push(<g key={g}><line x1={pad} y1={yy} x2={W - pad} y2={yy} stroke="#E5E8EE" /><text x={pad - 5} y={yy + 4} textAnchor="end" fontFamily="IBM Plex Mono" fontSize="10" fill="#9aa6b8">{fmt(max * (3 - g) / 3)}</text></g>)
   }
+  const dateAt = i => new Date(Date.now() - (n - 1 - i) * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  const bw = (W - 2 * pad) / n
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="260" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="260" preserveAspectRatio="none" onMouseLeave={() => setHi(null)}>
       <defs><linearGradient id="ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1763B8" stopOpacity=".22" /><stop offset="1" stopColor="#1763B8" stopOpacity="0" /></linearGradient></defs>
       {grid}
       <path d={area} fill="url(#ar)" />
       <path d={d} fill="none" stroke="#1763B8" strokeWidth="2" />
+      {hi != null && (() => {
+        const cx = x(hi), cy = y(data[hi]), tw = 116, tx = Math.min(Math.max(cx - tw / 2, pad), W - pad - tw)
+        return (
+          <g key="tip" pointerEvents="none">
+            <line x1={cx} y1={pad} x2={cx} y2={H - pad} stroke="#1763B8" strokeOpacity=".35" />
+            <circle cx={cx} cy={cy} r="4" fill="#1763B8" stroke="#fff" strokeWidth="2" />
+            <rect x={tx} y={pad - 4} width={tw} height="36" rx="6" fill="#14233B" />
+            <text x={tx + 9} y={pad + 9} fontFamily="IBM Plex Mono" fontSize="10" fill="#9fc0e8">{dateAt(hi)}</text>
+            <text x={tx + 9} y={pad + 24} fontFamily="Inter" fontSize="12.5" fontWeight="600" fill="#fff">{fmt(data[hi])} requests</text>
+          </g>
+        )
+      })()}
+      {data.map((_, i) => <rect key={i} x={x(i) - bw / 2} y={pad} width={bw} height={H - 2 * pad} fill="transparent" onMouseEnter={() => setHi(i)} />)}
     </svg>
   )
 }
 
-// hour-of-day bars
+// hour-of-day bars with hover readout; peak bar derived from data
 export function HourBars({ data }) {
+  const [hi, setHi] = useState(null)
   const W = 720, H = 220, pad = 24, max = Math.max(...data), bw = (W - 2 * pad) / 24
+  const peakIdx = data.indexOf(max)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="220">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="220" onMouseLeave={() => setHi(null)}>
       {data.map((v, i) => {
         const h = (v / max) * (H - 2 * pad - 14)
-        const peak = i === 13 || i === 15
+        const active = hi === i
+        const fill = active ? '#0f4f96' : (i === peakIdx ? C.blue : '#9fc0e8')
         return (
-          <g key={i}>
-            <rect x={pad + i * bw + 2} y={H - pad - h} width={bw - 4} height={h} rx="2" fill={peak ? C.blue : '#9fc0e8'} />
+          <g key={i} onMouseEnter={() => setHi(i)}>
+            <rect x={pad + i * bw + 2} y={H - pad - h} width={bw - 4} height={h} rx="2" fill={fill} />
+            <rect x={pad + i * bw} y={pad} width={bw} height={H - 2 * pad} fill="transparent" />
             {i % 3 === 0 && <text x={pad + i * bw + bw / 2} y={H - pad + 13} textAnchor="middle" fontFamily="IBM Plex Mono" fontSize="9.5" fill="#9aa6b8">{i}</text>}
           </g>
         )
       })}
+      {hi != null && (() => {
+        const cx = pad + hi * bw + bw / 2, tw = 104, tx = Math.min(Math.max(cx - tw / 2, 0), W - tw)
+        return (
+          <g key="tip" pointerEvents="none">
+            <rect x={tx} y="2" width={tw} height="34" rx="6" fill="#14233B" />
+            <text x={tx + 9} y="15" fontFamily="IBM Plex Mono" fontSize="10" fill="#9fc0e8">{String(hi).padStart(2, '0')}:00 UTC</text>
+            <text x={tx + 9} y="29" fontFamily="Inter" fontSize="12" fontWeight="600" fill="#fff">{fmt(data[hi])} req</text>
+          </g>
+        )
+      })()}
       <text x={W - pad} y="14" textAnchor="end" fontFamily="IBM Plex Mono" fontSize="9.5" fill="#9aa6b8">UTC hour →</text>
     </svg>
   )
