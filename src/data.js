@@ -3,6 +3,16 @@
 
 export const C = { blue:'#1763B8', merlin:'#6B45E6', green:'#1C8C58', amber:'#B5740E', red:'#C0392B', slate:'#62718A' }
 
+// Userpilot product-analytics reference (independent source, through 2026-06-17) for cross-verification.
+// Aggregate figures only — no individual identities.
+export const userpilot = {
+  through: '17 Jun 2026',
+  iContract: { companies: 47, activeCompanies: 46, activeUsers: 5624, occurrences: 480061, features: 29 },
+  searchSharePct: 98.7,
+  categories: [['Search', 473772], ['Authoring (AVOC)', 5706], ['Contract Creation', 305], ['Amendments', 241], ['Clauses', 27], ['Approvals', 8], ['Templates', 2]],
+  aiZero: ['AI Assist', 'Clause Discovery', 'Risk & Compliance'],
+}
+
 // Canonical lifecycle stages. Funnel steps, flow nodes and user records all
 // reference these keys, so any chart can drill into the exact users behind it.
 export const STAGE = {
