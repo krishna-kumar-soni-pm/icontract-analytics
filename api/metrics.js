@@ -24,6 +24,10 @@ const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
 
 export default async function handler(req, res) {
   try {
+    // password gate — protects the data even on a public domain (fail-closed)
+    if (!process.env.ACCESS_PASSWORD || (req.headers['x-access-key'] || '') !== process.env.ACCESS_PASSWORD) {
+      res.status(401).json({ error: 'unauthorized' }); return
+    }
     if (!process.env.DD_API_KEY || !process.env.DD_APP_KEY) throw new Error('Datadog keys not configured')
     const now = Math.floor(Date.now() / 1000), d90 = now - 90 * 86400, d7 = now - 7 * 86400
     const S = 'trace.servlet.request'
