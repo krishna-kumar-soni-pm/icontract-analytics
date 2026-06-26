@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import * as D from './data.js'
-import { KpiGrid, BarList, AreaTrend, HourBars, Sankey, Funnel, UserExplorer, Section, fmt } from './components.jsx'
+import { KpiGrid, BarList, AreaTrend, HourBars, Sankey, Funnel, UserExplorer, Section, Insight, fmt } from './components.jsx'
 import { useMetrics } from './useMetrics.js'
 import { useRum } from './useRum.js'
 
@@ -64,6 +64,17 @@ export default function App() {
     browsers:   r?.browsers || D.browsers,
   }
 
+  // ---- automated insights computed from the live data ----
+  const peakHour = ov.hours.indexOf(Math.max(...ov.hours))
+  const wdAvg = ov.weekday.filter(d => !['Sat','Sun'].includes(d[0])).reduce((s,d)=>s+d[1],0) / 5
+  const weAvg = (ov.weekday.filter(d => ['Sat','Sun'].includes(d[0])).reduce((s,d)=>s+d[1],0) / 2) || 1
+  const wdRatio = (wdAvg / weAvg).toFixed(1)
+  const topRegion = ov.regionVol[0]
+  const hottest = [...ov.regionTbl].sort((a,b)=>parseFloat(b[2])-parseFloat(a[2]))[0]
+  const reachOpen = rum.stageReach.find(s => s.k === 'open')
+  const reachSign = rum.stageReach.find(s => s.k === 'signoff')
+  const up = D.userpilot
+
   return (
     <>
       <div className="wrap">
@@ -98,10 +109,12 @@ export default function App() {
             <KpiGrid items={ov.kpis} />
             <Section kicker="Usage over time" title="Request volume" flag={F90}
               lead="Daily production traffic across all six regions over the last 90 days. Weekday peaks, weekend troughs.">
-              <Card hint="Daily totals · prod regions summed"><AreaTrend data={ov.dailyTrend} /></Card>
+              {m && <Insight>Backend demand is <b>{m.kpi.mom}</b> month-over-month and peaks on <b>{m.kpi.peak.split(' · ')[0]}</b>. The dominant rhythm is the working week — {m.kpi.peakSub}. Hover the line for any day's volume.</Insight>}
+              <Card hint="Daily totals · prod regions summed · hover for daily values"><AreaTrend data={ov.dailyTrend} /></Card>
             </Section>
             <Section kicker="When people work" title="Time-of-day & weekday rhythm" flag={F90}
               lead="A follow-the-sun workload: EU leads the mornings, the US carries the afternoons, and weekdays far outweigh weekends.">
+              <Insight>The busiest UTC hour is <b>{peakHour}:00</b> and weekdays run <b>{wdRatio}×</b> heavier than weekends — a business-hours load. Schedule deploys and maintenance for the ~05:00 UTC global trough.</Insight>
               <div className="grid g23">
                 <Card title="Requests by hour of day (UTC)" hint="Prod regions · last 7 days folded to hour-of-day"><HourBars data={ov.hours} /></Card>
                 <Card title="By weekday" hint="Busiest day highlighted">
@@ -111,6 +124,7 @@ export default function App() {
             </Section>
             <Section kicker="Where the load lives" title="Traffic & reliability by region" flag={F90}
               lead="US and EU carry most backend traffic; server-side error rates stay well under a tenth of a percent.">
+              <Insight><b>{topRegion[0].replace(/\s*\(.*\)/,'')}</b> carries <b>{topRegion[2]}</b> of backend load. Reliability is healthy everywhere; <b>{hottest[0]}</b> runs the hottest error rate at {hottest[2]} — still a small fraction of a percent.</Insight>
               <div className="grid g2">
                 <Card title="90-day request volume" hint="Total requests · share of prod">
                   <BarList rows={ov.regionVol.map(r => ({ name:r[0], v:r[1], color:D.C.blue, label:fmt(r[1]), sub:r[2] }))} />
@@ -130,6 +144,7 @@ export default function App() {
             <div className="drill-note">Hover any step or flow for the insight behind it. Click to open the exact users in the Users tab.</div>
             <Section kicker="Conversion" title="The authoring to execution funnel" flag={F30}
               lead="Stage reach counts every user who touched an area; the strict funnel counts only same-session author → workflow → sign-off order.">
+              {reachOpen && reachSign && <Insight><b>{reachOpen.main}</b> of users open a contract, but only <b>{reachSign.main}</b> reach sign-off — the lifecycle plays out across many sessions, so multi-session continuity (notifications, "resume where you left off") is the highest-leverage fix. Hover or click any step to open those users.</Insight>}
               <div className="grid g2">
                 <Card title="Stage reach · users touching each area" hint="Share of 812 sampled users · click a step to open them">
                   <Funnel rows={rum.stageReach} max={100} colors={[D.C.blue,D.C.merlin,D.C.blue,D.C.amber,D.C.green,D.C.slate]} onDrill={drill} />
@@ -163,6 +178,7 @@ export default function App() {
           <div className="panel active">
             <Section kicker="Exactly who" title="User explorer" flag={F30}
               lead="Search by name, tenant or role, or arrive here filtered from a funnel step or flow. Click any user to open their session detail.">
+              {r && <Insight>This table is a <b>live RUM sample</b> ({r.kpi.users} users from recent sessions) — not the full population. The true 30-day active-user count for iContract is <b>{up.iContract.activeUsers.toLocaleString()}</b> across <b>{up.iContract.companies} companies</b> (Userpilot). Use this view for session-level "who/how", not for sizing the user base.</Insight>}
               <UserExplorer users={rum.users} journeys={D.journeys} filter={filter} q={q} setQ={setQ} onClear={() => setFilter(null)} />
               <Card title="Role distribution" hint="iContract roles across sampled users" style={{marginTop:'16px'}}>
                 <BarList rows={D.roles.map(r => ({ name:r[0], v:r[1], color:D.C.merlin, label:r[1] }))} />
@@ -214,6 +230,7 @@ export default function App() {
               </div>
             </Section>
             <Section kicker="The differentiator" title="Merlin GenAI instrumentation gap" flag={F30}>
+              <Insight><b>Independently confirmed by Userpilot:</b> {up.aiZero.join(', ')} each logged <b>0</b> events in iContract. Two separate analytics tools agree the AI layer has no measurable usage — a real adoption gap, not just a tracking blind spot.</Insight>
               <div className="grid g2">
                 <Card title="Detectable AI-feature signal" hint="Whether each Merlin feature produced a clean RUM signal">
                   <table><thead><tr><th>Feature</th><th>Signal</th><th>Read</th></tr></thead>
@@ -225,6 +242,7 @@ export default function App() {
               </div>
             </Section>
             <Section kicker="Footprint" title="Customer adoption" flag={F30}>
+              <Insight>Per Userpilot, <b>{up.searchSharePct}%</b> of all iContract events are list <b>search</b> — the product is used mostly to <b>find</b> contracts, not author them (Create Contract: 230 events; Approvals: 8). Tenant universe cross-checks cleanly: Datadog sees {r ? r.kpi.tenants : '~47'} tenants vs Userpilot's <b>{up.iContract.companies} companies</b>.</Insight>
               <div className="grid g3">
                 <Card title="Top tenants" hint="Users per tenant (live sample)"><BarList rows={rum.tenants.map(t => ({ name:t[0], v:t[1], color:D.C.merlin, label:String(t[1]) }))} /></Card>
                 <Card title="Geography" hint="Users per country (Zycus QA excluded)"><BarList rows={rum.geo.map(g => ({ name:g[0], v:g[1], color:D.C.blue, label:String(g[1]) }))} /></Card>
