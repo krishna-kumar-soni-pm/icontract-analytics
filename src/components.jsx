@@ -236,7 +236,9 @@ export function UserExplorer({ users, journeys, filter, q, setQ, onClear }) {
         </table>
       </div>
       {rows.length === 0 && (
-        <div className="empty">No users match. <button className="linkbtn" onClick={() => { setQ(''); onClear() }}>Reset</button></div>
+        users.length === 0
+          ? <div className="empty">No live user data loaded. This populates from <span className="mono">/api/rum</span> on the deployed site; running locally requires <span className="mono">vercel dev</span> (plain <span className="mono">vite</span> can't run the serverless API).</div>
+          : <div className="empty">No users match {filter ? 'this funnel filter' : 'your search'}. <button className="linkbtn" onClick={() => { setQ(''); onClear() }}>Reset</button></div>
       )}
     </div>
   )
