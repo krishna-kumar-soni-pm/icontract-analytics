@@ -10,6 +10,7 @@ function devApi(env) {
       process.env.DD_API_KEY = env.DD_API_KEY
       process.env.DD_APP_KEY = env.DD_APP_KEY
       process.env.DD_SITE = env.DD_SITE || 'datadoghq.com'
+      process.env.ACCESS_PASSWORD = env.ACCESS_PASSWORD
       server.middlewares.use(async (req, res, next) => {
         const match = req.url && req.url.match(/^\/api\/(metrics|rum)(\?|$)/)
         if (!match) return next()
