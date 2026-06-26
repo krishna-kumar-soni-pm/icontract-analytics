@@ -40,6 +40,10 @@ const isBot = (email, name, browser) => /@zycus\.com$/i.test(email || '') || /^a
 
 export default async function handler(req, res) {
   try {
+    // password gate — protects the data even on a public domain (fail-closed)
+    if (!process.env.ACCESS_PASSWORD || (req.headers['x-access-key'] || '') !== process.env.ACCESS_PASSWORD) {
+      res.status(401).json({ error: 'unauthorized' }); return
+    }
     if (!process.env.DD_API_KEY || !process.env.DD_APP_KEY) throw new Error('Datadog keys not configured')
     const now = Date.now()
     const slices = await Promise.all(ANCHORS.map(d => {
