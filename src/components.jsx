@@ -1,7 +1,35 @@
 import { useState, Fragment } from 'react'
 import { C, STAGE, NODE_STAGE } from './data.js'
+import { setKey } from './auth.js'
 
 export const fmt = n => n >= 1e6 ? (n/1e6).toFixed(n>=1e7?0:1)+'M' : n >= 1e3 ? (n/1e3).toFixed(0)+'k' : (''+Math.round(n))
+
+// password gate shown before the dashboard mounts; validates against the serverless API
+export function Login({ onOk }) {
+  const [pw, setPw] = useState('')
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const submit = async e => {
+    e.preventDefault(); setBusy(true); setErr('')
+    try {
+      const r = await fetch('/api/metrics', { headers: { 'x-access-key': pw } })
+      if (r.ok) { setKey(pw); onOk() } else { setErr('Incorrect password'); setBusy(false) }
+    } catch { setErr('Network error — try again'); setBusy(false) }
+  }
+  return (
+    <div style={{ minHeight:'100vh', display:'grid', placeItems:'center', padding:'20px' }}>
+      <form onSubmit={submit} style={{ width:'min(360px,100%)', background:'var(--surface)', border:'1px solid var(--line)', borderRadius:'14px', boxShadow:'var(--shadow)', padding:'28px' }}>
+        <div className="eyebrow" style={{ marginBottom:'10px' }}>iContract · Analytics</div>
+        <h1 style={{ fontFamily:'Space Grotesk', fontSize:'22px', letterSpacing:'-.02em', margin:'0 0 6px' }}>Enter access password</h1>
+        <p style={{ fontSize:'13px', color:'var(--muted)', margin:'0 0 18px' }}>This dashboard contains customer data and is password-protected.</p>
+        <input type="password" autoFocus value={pw} onChange={e => setPw(e.target.value)} placeholder="Password"
+          style={{ width:'100%', padding:'10px 12px', borderRadius:'9px', border:'1px solid var(--line-strong)', fontSize:'14px', marginBottom:'10px', boxSizing:'border-box' }} />
+        {err && <div style={{ color:'var(--red)', fontSize:'12.5px', marginBottom:'10px' }}>{err}</div>}
+        <button type="submit" disabled={busy || !pw} style={{ width:'100%', padding:'10px', borderRadius:'9px', border:0, background:'var(--blue)', color:'#fff', fontWeight:600, fontSize:'14px', cursor:'pointer', opacity:(busy || !pw) ? .6 : 1 }}>{busy ? 'Checking…' : 'Unlock'}</button>
+      </form>
+    </div>
+  )
+}
 
 export function Kpi({ v, l, t, c }) {
   return (
